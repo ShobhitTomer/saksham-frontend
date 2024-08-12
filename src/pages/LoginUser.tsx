@@ -10,12 +10,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-const LoginPage = () => {
+const LoginUser = () => {
   return (
     <div className="flex justify-center items-center h-screen">
         <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle className="text-2xl">Login</CardTitle>
+        <CardTitle className="text-2xl">User Login</CardTitle>
         <CardDescription>
           Enter your email below to login to your account.
         </CardDescription>
@@ -38,4 +38,4 @@ const LoginPage = () => {
   )
 }
 
-export default LoginPage
+export default LoginUser
