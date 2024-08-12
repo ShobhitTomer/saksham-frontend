@@ -1,9 +1,8 @@
-import Navbar from "./NavBar"
 
 const HomePage = () => {
   return (
     <div>
-        <Navbar/>
+        Shobhit Tomer Was Here
     </div>
   )
 }
