@@ -4,17 +4,27 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import AuthLayout from "./layouts/AuthLayout";
 import LoginUser from "./pages/LoginUser";
 import LoginAdmin from "./pages/LoginAdmin";
+import Navbar from "./pages/Navbar";
+import AddUser from "./pages/AddUser";
 
 const router = createBrowserRouter([
     {
-      path: 'dashboard',
+      path: '/dashboard',
       element: <DashboardLayout/>,
       children: [
         {
-          path: '',
+          path: 'home',
           element: <HomePage/>
+        },
+        {
+          path: 'adduser',
+          element: <AddUser/>
         }
       ]
+    },
+    {
+      path: 'Navbar',
+      element: <Navbar/>
     },
     {
       path: '/auth',

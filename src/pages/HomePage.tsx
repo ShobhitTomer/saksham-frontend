@@ -2,7 +2,7 @@
 const HomePage = () => {
   return (
     <div>
-        Shobhit Tomer Was Here
+        {/* Shobhit Tomer Was Here */}
     </div>
   )
 }

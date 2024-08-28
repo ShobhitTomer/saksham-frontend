@@ -1,5 +1,5 @@
 import { CircleUser, Menu, Shield, Search } from "lucide-react"
-
+import { Link, Outlet } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Link, Outlet } from "react-router-dom"
+//import { Label } from "@/components/ui/label"
 
 const DashboardLayout = () => {
   return (
+    <div>
         <div className="flex min-h-screen w-full flex-col">
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
         <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
@@ -35,26 +36,38 @@ const DashboardLayout = () => {
             to="#"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            Orders
+            Dashboard
           </Link>
           <Link
             to="#"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            Products
+            FIRs
           </Link>
           <Link
             to="#"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            Customers
+            Users
           </Link>
-          <Link
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+            <Link
             to="#"
-            className="text-muted-foreground transition-colors hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
-            Settings
+              NewUser
           </Link>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem>Support</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Logout</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
         <Sheet>
           <SheetTrigger asChild>
@@ -74,34 +87,25 @@ const DashboardLayout = () => {
                 className="flex items-center gap-2 text-lg font-semibold"
               >
                 <Shield className="h-6 w-6" />
-                <span className="sr-only">Acme Inc</span>
+                <span className="sr-only">Saksham</span>
               </Link>
               <Link
                 to="#"
                 className="text-muted-foreground hover:text-foreground"
               >
-                Saksham
+                Dashboard
               </Link>
               <Link
                 to="#"
                 className="text-muted-foreground hover:text-foreground"
               >
-                Orders
+                FIRs
               </Link>
               <Link
                 to="#"
                 className="text-muted-foreground hover:text-foreground"
               >
-                Products
-              </Link>
-              <Link
-                to="#"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Customers
-              </Link>
-              <Link to="#" className="hover:text-foreground">
-                Settings
+                Users
               </Link>
             </nav>
           </SheetContent>
@@ -135,7 +139,12 @@ const DashboardLayout = () => {
           </DropdownMenu>
         </div>
       </header>
-      <Outlet/>
+      <main className="flex items-center min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
+          <div className="grid gap-6">
+            <Outlet/>
+          </div>
+      </main>
+    </div>
     </div>
   )
 }
