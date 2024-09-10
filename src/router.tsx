@@ -6,6 +6,7 @@ import LoginUser from "./pages/LoginUser";
 import LoginAdmin from "./pages/LoginAdmin";
 import Navbar from "./pages/Navbar";
 import AddUser from "./pages/AddUser";
+import FirPage from "./pages/FirPage";
 
 const router = createBrowserRouter([
     {
@@ -13,8 +14,13 @@ const router = createBrowserRouter([
       element: <DashboardLayout/>,
       children: [
         {
-          path: 'home',
+          path: '',
           element: <HomePage/>
+        },
+        {
+          path:'fir',
+          element:<FirPage/>
+
         },
         {
           path: 'adduser',
