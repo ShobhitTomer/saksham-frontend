@@ -9,8 +9,13 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useNavigate } from "react-router-dom"
 
 const LoginUser = () => {
+  const navigate = useNavigate();
+  const handleNavigate =()=>{
+    navigate('/dashboard')
+  }
   return (
     <div className="flex justify-center items-center h-screen">
         <Card className="w-full max-w-sm">
@@ -31,7 +36,7 @@ const LoginUser = () => {
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full">Sign in</Button>
+        <Button onClick={handleNavigate} className="w-full">Sign in</Button>
       </CardFooter>
     </Card>
     </div>

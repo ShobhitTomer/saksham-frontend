@@ -1,8 +1,10 @@
+import HeatGraph from "./HeatGraph"
 
 const HeatmapComponent = () => {
   return (
     <div>
-        HEATMAP
+       <HeatGraph/>
+      
       
     </div>
   )

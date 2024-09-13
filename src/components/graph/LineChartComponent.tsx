@@ -32,18 +32,11 @@ const chartConfig = {
 } satisfies ChartConfig
 type CrimeReportArray = CrimeReport[];
 import { CrimeReport } from "@/types/type";
-const chartData = [
-  { year: 2018, crimes: 2546 },
-  { year: 2019, crimes: 1546 },
-  { year: 2021, crimes: 9984 },
-  { year: 2022, crimes: 2105 },
-  { year: 2023, crimes: 9987 },
-  { year: 2024, crimes: 2203 },
-]
+
 const LineChartComponent=()=> {
   const typedData: CrimeReportArray = data as CrimeReportArray;
   const res = groupCrimesByYear(typedData)
-  console.log(chartData)
+  
   return (
     <Card>
       <CardHeader>
@@ -54,7 +47,7 @@ const LineChartComponent=()=> {
         <ChartContainer config={chartConfig}>
           <LineChart
             accessibilityLayer
-            data={chartData }
+            data={res }
             margin={{
               left: 12 ,
               right: 12,

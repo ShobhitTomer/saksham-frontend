@@ -59,6 +59,11 @@
   }
 }
 
+.leaflet-container{
+  height: 70vh
+
+}
+
 @layer base {
   * {
     @apply border-border;
