@@ -7,6 +7,7 @@ import LoginAdmin from "./pages/LoginAdmin";
 import Navbar from "./pages/Navbar";
 import AddUser from "./pages/AddUser";
 import FirPage from "./pages/FirPage";
+import Analysis from "./pages/Analysis";
 
 const router = createBrowserRouter([
   {
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
         {
           path: 'adduser',
           element: <AddUser/>
+        },
+        {
+          path:'analysis',
+          element:<Analysis/>
         }
       ]
     },

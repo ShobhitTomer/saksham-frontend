@@ -5,7 +5,7 @@ const FirPage = () => {
  
 
   return (
-    <div>
+    <div className="w-screen ">
       <SimpleTable/>
     </div>
   )

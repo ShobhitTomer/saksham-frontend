@@ -116,7 +116,7 @@ export default function Component() {
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
           <Select onValueChange={(value) => setFilterCategory(value)}>
