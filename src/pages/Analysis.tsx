@@ -1,8 +1,9 @@
+import { ReportGenerator } from "@/components/ReportGenerator";
 
-function Analysis() {
-  return (
+function Analysis(){
+  return(
     <div>
-      Analysis
+    <ReportGenerator/>
     </div>
   )
 }
