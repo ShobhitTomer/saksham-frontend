@@ -1,5 +1,5 @@
 import BarChartComponent from "@/components/graph/BarChartComponent";
-import HeatmapComponent from "@/components/graph/HeatmapComponent";
+import HeatmapComponent from "@/components/graph/HeatMapLeaflet";
 import LineChartComponent from "@/components/graph/LineChartComponent";
 import PieChartComponent from "@/components/graph/PieChartComponent";
 
