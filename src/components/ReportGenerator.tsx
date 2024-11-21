@@ -13,6 +13,7 @@ import { format, parseISO } from "date-fns"
 import { Pie, PieChart, Label as RechartsLabel, Cell, Tooltip } from "recharts"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 import { TrendingUp } from "lucide-react"
+import { RadialBarChart, RadialBar, PolarRadiusAxis } from 'recharts'
 
 interface DataItem {
   case_date: number
@@ -79,95 +80,158 @@ const Combobox: React.FC<ComboboxProps> = ({ options, placeholder, selectedValue
 const Charts: React.FC<{ 
   crimeChartData: any[]; 
   categoryData: any[]; 
+  genderData: any[]; 
   COLORS: string[]; 
   reportDataLength: number 
-}> = ({ crimeChartData, categoryData, COLORS, reportDataLength }) => {
+}> = ({ crimeChartData, categoryData, genderData, COLORS, reportDataLength }) => {
+  const totalGenderCount = genderData.reduce((acc, curr) => acc + curr.value, 0)
+  
   return (
-    <div className="flex flex-col md:flex-row md:space-x-8">
-      {/* Pie Chart */}
-      <Card className="flex-1">
-        <CardHeader>
-          <CardTitle>Crime-wise Incidents Chart</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mx-auto max-w-md">
-            <PieChart width={300} height={300}>
-              <Pie
-                data={crimeChartData}
-                dataKey="count"
-                nameKey="crime"
+    <Card className="w-full max-w-6xl mx-auto">
+      <CardHeader>
+        <CardTitle className="text-center text-2xl font-bold">Analysis Charts</CardTitle>
+        <CardDescription className="text-center">Detailed metrics displayed through interactive charts</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Crime-wise Pie Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Crime-wise Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <PieChart width={300} height={300}>
+                <Pie
+                  data={crimeChartData}
+                  dataKey="count"
+                  nameKey="crime"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  labelLine={false}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                >
+                  {crimeChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                  <RechartsLabel
+                    position="center"
+                    content={({ viewBox }) => {
+                      if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                        return (
+                          <text
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                          >
+                            <tspan
+                              x={viewBox.cx}
+                              y={viewBox.cy}
+                              className="fill-foreground text-3xl font-bold"
+                            >
+                              {reportDataLength}
+                            </tspan>
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) + 24}
+                              className="fill-muted-foreground"
+                            >
+                              Incidents
+                            </tspan>
+                          </text>
+                        )
+                      }
+                    }}
+                  />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </CardContent>
+          </Card>
+
+          {/* Category-wise Bar Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Category-wise Comparison</CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <BarChart width={300} height={300} data={categoryData}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => value.slice(0, 3)}
+                />
+                <Tooltip />
+                <Bar dataKey="vehicle" fill="hsl(var(--chart-1))" radius={4} name="Vehicle" />
+                <Bar dataKey="mobile" fill="hsl(var(--chart-1))" radius={4} name="Mobile" />
+              </BarChart>
+            </CardContent>
+          </Card>
+
+          {/* Gender-wise Radial Bar Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Gender Comparison</CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <RadialBarChart
+                width={300}
+                height={300}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
-                outerRadius={80}
-                labelLine={false}
-                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                outerRadius={130}
+                data={genderData}
+                startAngle={180}
+                endAngle={0}
               >
-                {crimeChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <PolarRadiusAxis tick={false} axisLine={false}>
+                  <Label
+                    position="center"
+                    content={({ viewBox }) => {
+                      if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                        return (
+                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) - 16}
+                              className="fill-foreground text-2xl font-bold"
+                            >
+                              {totalGenderCount}
+                            </tspan>
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) + 4}
+                              className="fill-muted-foreground"
+                            >
+                              Reports
+                            </tspan>
+                          </text>
+                        )
+                      }
+                    }}
+                  />
+                </PolarRadiusAxis>
+                {genderData.map((entry, index) => (
+                  <RadialBar
+                    key={index}
+                    dataKey="value"
+                    data={[entry]}
+                    cornerRadius={5}
+                    fill={COLORS[index % COLORS.length]}
+                  />
                 ))}
-                <RechartsLabel
-                  position="center"
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          <tspan
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            className="fill-foreground text-3xl font-bold"
-                          >
-                            {reportDataLength}
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 24}
-                            className="fill-muted-foreground"
-                          >
-                            Incidents
-                          </tspan>
-                        </text>
-                      )
-                    }
-                  }}
-                />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bar Chart */}
-      <Card className="flex-1 mt-8 md:mt-0">
-        <CardHeader>
-          <CardTitle>Category-wise Comparison</CardTitle>
-          <CardDescription>Vehicle vs Mobile Theft</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full">
-            <BarChart width={300} height={300} data={categoryData}>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                tickFormatter={(value) => value.slice(0, 3)}
-              />
-              <Tooltip />
-              <Bar dataKey="vehicle" fill="hsl(var(--chart-1))" radius={4} name="Vehicle" />
-              <Bar dataKey="mobile" fill="hsl(var(--chart-1))" radius={4} name="Mobile" />
-            </BarChart>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              </RadialBarChart>
+            </CardContent>
+          </Card>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -270,8 +334,17 @@ export const ReportGenerator: React.FC = () => {
   // Define colors for the pie chart slices
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF']
 
+  // Compute genderData
+  const genderData = React.useMemo(() => {
+    const counts = [
+      { name: 'Male', value: reportData.filter(item => item.Gender.toLowerCase() === 'male').length },
+      { name: 'Female', value: reportData.filter(item => item.Gender.toLowerCase() === 'female').length }
+    ]
+    return counts
+  }, [reportData])
+
   return (
-    <div className="container mx-auto py-8 flex flex-col items-center">
+    <div className="container mx-auto py-8">
       {/* Input Fields (Filters) */}
       <h1 className="text-4xl font-bold mb-8 text-center">Analysis Report Generator</h1>
       <Card>
@@ -340,47 +413,64 @@ export const ReportGenerator: React.FC = () => {
       {reportData.length > 0 && (
         <>
           {/* Summary Numbers */}
-          <div className="mt-8 w-full max-w-4xl">
+          <div className="mt-8 w-full max-w-6xl mx-auto">
             <Card>
               <CardHeader>
-                <CardTitle>Report Summary</CardTitle>
+                <CardTitle className="text-center text-2xl font-bold">Report Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-semibold mb-4 text-center">Total Incidents: <span className="font-bold">{reportData.length}</span></p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-lg font-semibold mb-2">District-wise Incidents</p>
-                    <ul className="list-disc pl-5">
-                      {Object.entries(districtWiseCount).map(([district, count]) => (
-                        <li key={district}>{district}: <span className="font-bold">{count}</span></li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold mb-2">Crime-wise Incidents</p>
-                    <ul className="list-disc pl-5">
-                      {Object.entries(crimeWiseCount).map(([crime, count]) => (
-                        <li key={crime}>{crime}: <span className="font-bold">{count}</span></li>
-                      ))}
-                    </ul>
-                  </div>
+                <p className="text-lg font-semibold mb-6 text-center">
+                  Total Incidents: <span className="font-bold">{reportData.length}</span>
+                </p>
+                <div className="grid grid-cols-1 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-center">District-wise Incidents</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        {Object.entries(districtWiseCount).map(([district, count]) => (
+                          <div key={district} className="flex justify-between border p-2 rounded">
+                            <span>{district}</span>
+                            <span className="font-bold">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-center">Crime-wise Incidents</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        {Object.entries(crimeWiseCount).map(([crime, count]) => (
+                          <div key={crime} className="flex justify-between border p-2 rounded">
+                            <span>{crime}</span>
+                            <span className="font-bold">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Charts Section */}
-          <div className="mt-8 w-full max-w-4xl">
+          <div className="mt-8 w-full max-w-6xl mx-auto">
             <Charts 
               crimeChartData={crimeChartData} 
               categoryData={categoryData} 
+              genderData={genderData}
               COLORS={COLORS} 
               reportDataLength={reportData.length} 
             />
           </div>
 
           {/* Incidents List */}
-          <div className="mt-8">
+          <div className="mt-8 w-full max-w-6xl mx-auto">
             <Card>
               <CardHeader>
                 <CardTitle>Incident Details</CardTitle>
