@@ -13,7 +13,10 @@ import { format, parseISO } from "date-fns"
 import { Pie, PieChart, Label as RechartsLabel, Cell, Tooltip } from "recharts"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 import { TrendingUp } from "lucide-react"
-import { RadialBarChart, RadialBar, PolarRadiusAxis } from 'recharts'
+import { RadialBarChart, RadialBar, PolarRadiusAxis, Label as L, Cell as C } from 'recharts'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import { Tooltip as RechartsTooltip } from 'recharts'
 
 interface DataItem {
   case_date: number
@@ -77,6 +80,17 @@ const Combobox: React.FC<ComboboxProps> = ({ options, placeholder, selectedValue
   )
 }
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-background border rounded-lg p-2 shadow-md">
+        <p className="text-sm">{`${payload[0].payload.name}: ${payload[0].value}`}</p>
+      </div>
+    )
+  }
+  return null
+}
+
 const Charts: React.FC<{ 
   crimeChartData: any[]; 
   categoryData: any[]; 
@@ -113,7 +127,7 @@ const Charts: React.FC<{
                   label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                 >
                   {crimeChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <C key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                   <RechartsLabel
                     position="center"
@@ -177,56 +191,75 @@ const Charts: React.FC<{
           <Card>
             <CardHeader>
               <CardTitle className="text-center">Gender Comparison</CardTitle>
+              <CardDescription className="text-center">Distribution of cases by gender</CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
-              <RadialBarChart
-                width={300}
-                height={300}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={130}
-                data={genderData}
-                startAngle={180}
-                endAngle={0}
-              >
-                <PolarRadiusAxis tick={false} axisLine={false}>
-                  <Label
-                    position="center"
-                    content={({ viewBox }) => {
-                      if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                        return (
-                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy || 0) - 16}
-                              className="fill-foreground text-2xl font-bold"
-                            >
-                              {totalGenderCount}
-                            </tspan>
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy || 0) + 4}
-                              className="fill-muted-foreground"
-                            >
-                              Reports
-                            </tspan>
-                          </text>
-                        )
-                      }
-                    }}
-                  />
-                </PolarRadiusAxis>
+              <div className="mx-auto aspect-square w-full max-w-[300px]">
+                <RadialBarChart
+                  width={300}
+                  height={300}
+                  data={genderData}
+                  startAngle={180}
+                  endAngle={0}
+                  innerRadius={80}
+                  outerRadius={130}
+                >
+                  <PolarRadiusAxis tick={false} axisLine={false}>
+                    <L
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          return (
+                            <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
+                              <tspan
+                                x={viewBox.cx}
+                                y={(viewBox.cy || 0) - 16}
+                                className="fill-foreground text-2xl font-bold"
+                              >
+                                {totalGenderCount}
+                              </tspan>
+                              <tspan
+                                x={viewBox.cx}
+                                y={(viewBox.cy || 0) + 4}
+                                className="fill-muted-foreground"
+                              >
+                                Total Cases
+                              </tspan>
+                            </text>
+                          )
+                        }
+                      }}
+                    />
+                  </PolarRadiusAxis>
+                  {genderData.map((entry, index) => (
+                    <RadialBar
+                      key={entry.name}
+                      dataKey="value"
+                      data={[entry]}
+                      startAngle={180}
+                      endAngle={0}
+                      cornerRadius={5}
+                      fill={COLORS[index]}
+                      className="stroke-transparent stroke-2"
+                    />
+                  ))}
+                  <RechartsTooltip content={CustomTooltip} />
+                </RadialBarChart>
+              </div>
+            </CardContent>
+            <CardContent className="pt-0">
+              <div className="flex justify-center gap-4">
                 {genderData.map((entry, index) => (
-                  <RadialBar
-                    key={index}
-                    dataKey="value"
-                    data={[entry]}
-                    cornerRadius={5}
-                    fill={COLORS[index % COLORS.length]}
-                  />
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <div
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: COLORS[index] }}
+                    />
+                    <span className="text-sm">
+                      {entry.name}: {entry.value}
+                    </span>
+                  </div>
                 ))}
-              </RadialBarChart>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -243,6 +276,125 @@ export const ReportGenerator: React.FC = () => {
   const [district, setDistrict] = React.useState<string | null>(null)
   const [ipc, setIpc] = React.useState<string | null>(null)
   const [reportData, setReportData] = React.useState<DataItem[]>([])
+  const reportRef = React.useRef<HTMLDivElement>(null)
+  const chartsRef = React.useRef<HTMLDivElement>(null)
+  const incidentsRef = React.useRef<HTMLDivElement>(null)
+
+  const convertExcelDateToJS = (excelDate: number) => {
+    try {
+      const millisecondsPerDay = 24 * 60 * 60 * 1000;
+      return new Date((excelDate - 25569) * millisecondsPerDay);
+    } catch (error) {
+      console.error('Error converting date:', error);
+      return new Date(); // Return current date as fallback
+    }
+  }
+
+  const getDateRange = React.useMemo(() => {
+    try {
+      if (dateRange.startDate && dateRange.endDate) {
+        return {
+          start: format(dateRange.startDate, "MM/dd/yyyy"),
+          end: format(dateRange.endDate, "MM/dd/yyyy")
+        }
+      }
+      
+      const validDates = reportData
+        .map(item => convertExcelDateToJS(item.case_date))
+        .filter(date => !isNaN(date.getTime())); // Filter out invalid dates
+
+      if (validDates.length === 0) {
+        return {
+          start: format(new Date(), "MM/dd/yyyy"),
+          end: format(new Date(), "MM/dd/yyyy")
+        }
+      }
+
+      const minDate = new Date(Math.min(...validDates.map(d => d.getTime())));
+      const maxDate = new Date(Math.max(...validDates.map(d => d.getTime())));
+
+      return {
+        start: format(minDate, "MM/dd/yyyy"),
+        end: format(maxDate, "MM/dd/yyyy")
+      }
+    } catch (error) {
+      console.error('Error calculating date range:', error);
+      return {
+        start: format(new Date(), "MM/dd/yyyy"),
+        end: format(new Date(), "MM/dd/yyyy")
+      }
+    }
+  }, [dateRange, reportData]);
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current || !chartsRef.current || !incidentsRef.current) return
+
+    const pdf = new jsPDF()
+    let currentY = 0
+
+    // Add report summary
+    const summaryCanvas = await html2canvas(reportRef.current)
+    const summaryImgData = summaryCanvas.toDataURL('image/png')
+    const summaryWidth = pdf.internal.pageSize.getWidth()
+    const summaryHeight = (summaryCanvas.height * summaryWidth) / summaryCanvas.width
+    pdf.addImage(summaryImgData, 'PNG', 0, currentY, summaryWidth, summaryHeight)
+    currentY += summaryHeight + 10
+
+    // Add charts
+    const chartsCanvas = await html2canvas(chartsRef.current)
+    const chartsImgData = chartsCanvas.toDataURL('image/png')
+    const chartsWidth = pdf.internal.pageSize.getWidth()
+    const chartsHeight = (chartsCanvas.height * chartsWidth) / chartsCanvas.width
+    
+    if (currentY + chartsHeight > pdf.internal.pageSize.getHeight()) {
+      pdf.addPage()
+      currentY = 0
+    }
+    pdf.addImage(chartsImgData, 'PNG', 0, currentY, chartsWidth, chartsHeight)
+    
+    // Add incidents table
+    pdf.addPage()
+    pdf.setFontSize(14)
+    pdf.text('Incident Details', 14, 15)
+    
+    const headers = ['Case No', 'District', 'Date', 'Crime Type', 'Category', 'Age']
+    let startY = 25
+    const rowHeight = 10
+    const margin = 14
+    
+    pdf.setFontSize(10)
+    reportData.forEach((item, index) => {
+      if (startY > pdf.internal.pageSize.getHeight() - 20) {
+        pdf.addPage()
+        startY = 25
+      }
+      
+      const row = [
+        item.fir_no,
+        item["District/City"],
+        format(new Date((item.case_date - 25569) * 86400 * 1000), "MM/dd/yyyy"),
+        item.Crime_Head,
+        item.Category,
+        item.age.toString()
+      ]
+      
+      if (index === 0) {
+        pdf.setFont(undefined, 'bold')
+        headers.forEach((header, i) => {
+          pdf.text(header, margin + (i * 30), startY)
+        })
+        pdf.setFont(undefined, 'normal')
+        startY += rowHeight
+      }
+      
+      row.forEach((cell, i) => {
+        pdf.text(cell.toString(), margin + (i * 30), startY)
+      })
+      startY += rowHeight
+    })
+
+    pdf.save('report.pdf')
+  }
 
   const genderTypeOptions = [
     { value: "Male", label: "Male" },
@@ -262,20 +414,25 @@ export const ReportGenerator: React.FC = () => {
 
   const handleGenerateReport = () => {
     const filteredData = data.filter((item) => {
-      const caseDate = new Date((item.case_date - 25569) * 86400 * 1000)
-      const isWithinDateRange = dateRange.startDate && dateRange.endDate
-        ? caseDate >= dateRange.startDate && caseDate <= dateRange.endDate
-        : true
-      const isWithinAgeRange = item.age >= ageRange[0] && item.age <= ageRange[1]
-      const matchesCategory = !category || item.Category.toLowerCase() === category.toLowerCase()
-      const matchesGender = !genderType || item.Gender.toLowerCase() === genderType.toLowerCase()
-      const matchesDistrict = !district || item["District/City"] === district
-      const matchesIpc = !ipc || item.Crime_Head === ipc
+      try {
+        const caseDate = convertExcelDateToJS(item.case_date);
+        const isWithinDateRange = dateRange.startDate && dateRange.endDate
+          ? caseDate >= dateRange.startDate && caseDate <= dateRange.endDate
+          : true;
+        const isWithinAgeRange = item.age >= ageRange[0] && item.age <= ageRange[1]
+        const matchesCategory = !category || item.Category.toLowerCase() === category.toLowerCase()
+        const matchesGender = !genderType || item.Gender.toLowerCase() === genderType.toLowerCase()
+        const matchesDistrict = !district || item["District/City"] === district
+        const matchesIpc = !ipc || item.Crime_Head === ipc
 
-      return isWithinDateRange && isWithinAgeRange && matchesCategory && matchesGender && matchesDistrict && matchesIpc
-    })
-    setReportData(filteredData)
-  }
+        return isWithinDateRange && isWithinAgeRange && matchesCategory && matchesGender && matchesDistrict && matchesIpc;
+      } catch (error) {
+        console.error('Error processing item:', item, error);
+        return false;
+      }
+    });
+    setReportData(filteredData);
+  };
 
   const districtWiseCount = React.useMemo(() => {
     const counts: { [key: string]: number } = {}
@@ -332,7 +489,7 @@ export const ReportGenerator: React.FC = () => {
   }, [crimeWiseCount])
 
   // Define colors for the pie chart slices
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF']
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF1919', '#00FF85', '#4B0082']
 
   // Compute genderData
   const genderData = React.useMemo(() => {
@@ -342,6 +499,16 @@ export const ReportGenerator: React.FC = () => {
     ]
     return counts
   }, [reportData])
+
+  const formatDate = (excelDate: number) => {
+    try {
+      const date = convertExcelDateToJS(excelDate);
+      return format(date, "MM/dd/yyyy");
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -413,14 +580,20 @@ export const ReportGenerator: React.FC = () => {
       {reportData.length > 0 && (
         <>
           {/* Summary Numbers */}
-          <div className="mt-8 w-full max-w-6xl mx-auto">
+          <div ref={reportRef} className="mt-8 w-full max-w-6xl mx-auto">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-center text-2xl font-bold">Report Summary</CardTitle>
+              <CardHeader className="relative">
+                <CardTitle className="text-center text-4xl font-bold">Report Summary</CardTitle>
+                <Button onClick={handleExportPDF} className="absolute top-4 right-4">
+                  Export PDF
+                </Button>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-semibold mb-6 text-center">
-                  Total Incidents: <span className="font-bold">{reportData.length}</span>
+                <p className="text-2xl font-semibold mb-2 text-center">
+                  Total Incidents: <span className="font-bold text-red-500">{reportData.length}</span>
+                </p>
+                <p className="text-sm text-muted-foreground mb-6 text-center">
+                  Date Range: {getDateRange.start} - {getDateRange.end}
                 </p>
                 <div className="grid grid-cols-1 gap-6">
                   <Card>
@@ -432,7 +605,7 @@ export const ReportGenerator: React.FC = () => {
                         {Object.entries(districtWiseCount).map(([district, count]) => (
                           <div key={district} className="flex justify-between border p-2 rounded">
                             <span>{district}</span>
-                            <span className="font-bold">{count}</span>
+                            <span className="font-bold ">{count}</span>
                           </div>
                         ))}
                       </div>
@@ -459,7 +632,7 @@ export const ReportGenerator: React.FC = () => {
           </div>
 
           {/* Charts Section */}
-          <div className="mt-8 w-full max-w-6xl mx-auto">
+          <div ref={chartsRef} className="mt-8 w-full max-w-6xl mx-auto">
             <Charts 
               crimeChartData={crimeChartData} 
               categoryData={categoryData} 
@@ -470,7 +643,7 @@ export const ReportGenerator: React.FC = () => {
           </div>
 
           {/* Incidents List */}
-          <div className="mt-8 w-full max-w-6xl mx-auto">
+          <div ref={incidentsRef} className="mt-8 w-full max-w-6xl mx-auto">
             <Card>
               <CardHeader>
                 <CardTitle>Incident Details</CardTitle>
@@ -493,7 +666,7 @@ export const ReportGenerator: React.FC = () => {
                         <tr key={index} className="border-b">
                           <td className="p-2">{item.fir_no}</td>
                           <td className="p-2">{item["District/City"]}</td>
-                          <td className="p-2">{format(new Date((item.case_date - 25569) * 86400 * 1000), "MM/dd/yyyy")}</td>
+                          <td className="p-2">{formatDate(item.case_date)}</td>
                           <td className="p-2">{item.Crime_Head}</td>
                           <td className="p-2">{item.Category}</td>
                           <td className="p-2">{item.age}</td>
