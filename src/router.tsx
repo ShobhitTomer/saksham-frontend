@@ -4,10 +4,12 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import AuthLayout from "./layouts/AuthLayout";
 import SignIn from "./pages/SignIn";
 import Navbar from "./pages/Navbar";
-import AddUser from "./pages/AddUser";
 import FirPage from "./pages/FirPage";
 import Analysis from "./pages/Analysis";
 import SignUp from "./pages/SignUp";
+import AllUsers from "./pages/AllUsers";
+import AddUser from "./pages/AddUser";
+import DeleteUser from "./pages/DeleteUser";
 
 const router = createBrowserRouter([
   {
@@ -27,8 +29,18 @@ const router = createBrowserRouter([
         element: <FirPage />,
       },
       {
-        path: "adduser",
-        element: <AddUser />,
+        path: "users",
+        element: <AllUsers />,
+        children: [
+          {
+            path: "adduser",
+            element: <AddUser />,
+          },
+          {
+            path: "deleteuser",
+            element: <DeleteUser />,
+          }
+        ]
       },
       {
         path: "analysis",

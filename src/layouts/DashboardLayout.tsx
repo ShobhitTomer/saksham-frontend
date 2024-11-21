@@ -25,10 +25,10 @@ const DashboardLayout = () => {
             Saksham
           </Link>
           <Link
-            to="/dashboard"
+            to="/dashboard/users"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            Dashboard
+            Users
           </Link>
           <Link
             to="/dashboard/fir"

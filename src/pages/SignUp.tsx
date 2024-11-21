@@ -22,7 +22,7 @@ const SignUp = () => {
 
   const handleSubmit =async()=>{
     try{
-      const response = await fetch("http://localhost:5000/api/v1/admin/signup",{
+      const response = await fetch("http://localhost:5001/api/v1/admin/signup",{
         method:"POST",
         headers:
         {"Content-Type":"application/json"},
