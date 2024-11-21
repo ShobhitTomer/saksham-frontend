@@ -5,11 +5,14 @@ import { Check, ChevronsUpDown } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import dataJson from "../data/data.json"
 import { format, parseISO } from "date-fns"
+import { Pie, PieChart, Label as RechartsLabel, Cell, Tooltip } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
+import { TrendingUp } from "lucide-react"
 
 interface DataItem {
   case_date: number
@@ -73,20 +76,109 @@ const Combobox: React.FC<ComboboxProps> = ({ options, placeholder, selectedValue
   )
 }
 
+const Charts: React.FC<{ 
+  crimeChartData: any[]; 
+  categoryData: any[]; 
+  COLORS: string[]; 
+  reportDataLength: number 
+}> = ({ crimeChartData, categoryData, COLORS, reportDataLength }) => {
+  return (
+    <div className="flex flex-col md:flex-row md:space-x-8">
+      {/* Pie Chart */}
+      <Card className="flex-1">
+        <CardHeader>
+          <CardTitle>Crime-wise Incidents Chart</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mx-auto max-w-md">
+            <PieChart width={300} height={300}>
+              <Pie
+                data={crimeChartData}
+                dataKey="count"
+                nameKey="crime"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={80}
+                labelLine={false}
+                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+              >
+                {crimeChartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+                <RechartsLabel
+                  position="center"
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
+                          x={viewBox.cx}
+                          y={viewBox.cy}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                        >
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-foreground text-3xl font-bold"
+                          >
+                            {reportDataLength}
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 24}
+                            className="fill-muted-foreground"
+                          >
+                            Incidents
+                          </tspan>
+                        </text>
+                      )
+                    }
+                  }}
+                />
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bar Chart */}
+      <Card className="flex-1 mt-8 md:mt-0">
+        <CardHeader>
+          <CardTitle>Category-wise Comparison</CardTitle>
+          <CardDescription>Vehicle vs Mobile Theft</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] w-full">
+            <BarChart width={300} height={300} data={categoryData}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tickFormatter={(value) => value.slice(0, 3)}
+              />
+              <Tooltip />
+              <Bar dataKey="vehicle" fill="hsl(var(--chart-1))" radius={4} name="Vehicle" />
+              <Bar dataKey="mobile" fill="hsl(var(--chart-1))" radius={4} name="Mobile" />
+            </BarChart>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export const ReportGenerator: React.FC = () => {
   const [dateRange, setDateRange] = React.useState<{ startDate: Date | null; endDate: Date | null }>({ startDate: null, endDate: null })
   const [ageRange, setAgeRange] = React.useState<[number, number]>([0, 100])
-  const [crimeType, setCrimeType] = React.useState<string | null>(null)
   const [genderType, setGenderType] = React.useState<string | null>(null)
   const [category, setCategory] = React.useState<string | null>(null)
+  const [district, setDistrict] = React.useState<string | null>(null)
+  const [ipc, setIpc] = React.useState<string | null>(null)
   const [reportData, setReportData] = React.useState<DataItem[]>([])
-
-  const crimeTypeOptions = [
-    { value: "Theft (IPC 379/380)", label: "Theft" },
-    { value: "assault", label: "Assault" },
-    { value: "robbery", label: "Robbery" },
-    {value: "burglary", label: "Burglary"},
-  ]
 
   const genderTypeOptions = [
     { value: "Male", label: "Male" },
@@ -98,6 +190,10 @@ export const ReportGenerator: React.FC = () => {
     { value: "Mobile", label: "Mobile" },
   ]
 
+  const districtOptions = Array.from(new Set(dataJson.map((item: DataItem) => item["District/City"]))).map(district => ({ value: district, label: district }))
+
+  const ipcOptions = Array.from(new Set(dataJson.map((item: DataItem) => item.Crime_Head))).map(ipc => ({ value: ipc, label: ipc }))
+
   const data: DataItem[] = dataJson as DataItem[]
 
   const handleGenerateReport = () => {
@@ -107,18 +203,76 @@ export const ReportGenerator: React.FC = () => {
         ? caseDate >= dateRange.startDate && caseDate <= dateRange.endDate
         : true
       const isWithinAgeRange = item.age >= ageRange[0] && item.age <= ageRange[1]
-      const matchesCrimeType = !crimeType || item.Crime_Head.toLowerCase().split(" ")[0] === crimeType
-      console.log(item.Crime_Head.toLowerCase().split(" ")[0])
       const matchesCategory = !category || item.Category.toLowerCase() === category.toLowerCase()
       const matchesGender = !genderType || item.Gender.toLowerCase() === genderType.toLowerCase()
+      const matchesDistrict = !district || item["District/City"] === district
+      const matchesIpc = !ipc || item.Crime_Head === ipc
 
-      return isWithinDateRange && isWithinAgeRange && matchesCrimeType && matchesCategory && matchesGender
+      return isWithinDateRange && isWithinAgeRange && matchesCategory && matchesGender && matchesDistrict && matchesIpc
     })
     setReportData(filteredData)
   }
 
+  const districtWiseCount = React.useMemo(() => {
+    const counts: { [key: string]: number } = {}
+    reportData.forEach(item => {
+      counts[item["District/City"]] = (counts[item["District/City"]] || 0) + 1
+    })
+    return counts
+  }, [reportData])
+
+  // Add helper function to truncate crime names
+  const truncateCrimeName = (crime: string) => {
+    const bracketIndex = crime.indexOf('(')
+    return bracketIndex > -1 ? crime.slice(0, bracketIndex).trim() : crime
+  }
+
+  // Modify crimeWiseCount to use truncated names
+  const crimeWiseCount = React.useMemo(() => {
+    const counts: { [key: string]: number } = {}
+    reportData.forEach(item => {
+      const crimeName = truncateCrimeName(item.Crime_Head)
+      counts[crimeName] = (counts[crimeName] || 0) + 1
+    })
+    return counts
+  }, [reportData])
+
+  // Add category comparison data
+  const categoryData = React.useMemo(() => {
+    const monthlyData: { [key: string]: { month: string; vehicle: number; mobile: number } } = {}
+    
+    reportData.forEach(item => {
+      const date = new Date((item.case_date - 25569) * 86400 * 1000)
+      const month = date.toLocaleString('default', { month: 'long' })
+      
+      if (!monthlyData[month]) {
+        monthlyData[month] = { month, vehicle: 0, mobile: 0 }
+      }
+      
+      if (item.Category.toLowerCase() === 'vehical') {
+        monthlyData[month].vehicle++
+      } else if (item.Category.toLowerCase() === 'mobile') {
+        monthlyData[month].mobile++
+      }
+    })
+
+    return Object.values(monthlyData)
+  }, [reportData])
+
+  // Prepare data for the pie chart
+  const crimeChartData = React.useMemo(() => {
+    return Object.entries(crimeWiseCount).map(([crime, count]) => ({
+      crime,
+      count,
+    }))
+  }, [crimeWiseCount])
+
+  // Define colors for the pie chart slices
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF']
+
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 flex flex-col items-center">
+      {/* Input Fields (Filters) */}
       <h1 className="text-4xl font-bold mb-8 text-center">Analysis Report Generator</h1>
       <Card>
         <CardHeader>
@@ -158,17 +312,25 @@ export const ReportGenerator: React.FC = () => {
                 />
               </div>
             </div>
-            <div>
-              <Label>Crime Type</Label>
-              <Combobox options={crimeTypeOptions} placeholder="Select Crime Type" selectedValue={crimeType} onValueChange={setCrimeType} />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Gender</Label>
+                <Combobox options={genderTypeOptions} placeholder="Select Gender" selectedValue={genderType} onValueChange={setGenderType} />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Combobox options={categoryOptions} placeholder="Select Category" selectedValue={category} onValueChange={setCategory} />
+              </div>
             </div>
-            <div>
-              <Label>Gender</Label>
-              <Combobox options={genderTypeOptions} placeholder="Select Gender" selectedValue={genderType} onValueChange={setGenderType} />
-            </div>
-            <div>
-              <Label>Category</Label>
-              <Combobox options={categoryOptions} placeholder="Select Category" selectedValue={category} onValueChange={setCategory} />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>District</Label>
+                <Combobox options={districtOptions} placeholder="Select District" selectedValue={district} onValueChange={setDistrict} />
+              </div>
+              <div>
+                <Label>IPC</Label>
+                <Combobox options={ipcOptions} placeholder="Select IPC" selectedValue={ipc} onValueChange={setIpc} />
+              </div>
             </div>
           </div>
           <Button onClick={handleGenerateReport} className="mt-6 w-full">Generate Report</Button>
@@ -176,40 +338,84 @@ export const ReportGenerator: React.FC = () => {
       </Card>
 
       {reportData.length > 0 && (
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Report Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-semibold mb-4">Total Incidents: {reportData.length}</p>
-            <div className="max-h-96 overflow-y-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="p-2 text-left">Case No</th>
-                    <th className="p-2 text-left">District</th>
-                    <th className="p-2 text-left">Date</th>
-                    <th className="p-2 text-left">Crime Type</th>
-                    <th className="p-2 text-left">Category</th>
-                    <th className="p-2 text-left">Age</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.map((item, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-2">{item.fir_no}</td>
-                      <td className="p-2">{item["District/City"]}</td>
-                      <td className="p-2">{format(new Date((item.case_date - 25569) * 86400 * 1000), "MM/dd/yyyy")}</td>
-                      <td className="p-2">{item.Crime_Head}</td>
-                      <td className="p-2">{item.Category}</td>
-                      <td className="p-2">{item.age}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          {/* Summary Numbers */}
+          <div className="mt-8 w-full max-w-4xl">
+            <Card>
+              <CardHeader>
+                <CardTitle>Report Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg font-semibold mb-4 text-center">Total Incidents: <span className="font-bold">{reportData.length}</span></p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-lg font-semibold mb-2">District-wise Incidents</p>
+                    <ul className="list-disc pl-5">
+                      {Object.entries(districtWiseCount).map(([district, count]) => (
+                        <li key={district}>{district}: <span className="font-bold">{count}</span></li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold mb-2">Crime-wise Incidents</p>
+                    <ul className="list-disc pl-5">
+                      {Object.entries(crimeWiseCount).map(([crime, count]) => (
+                        <li key={crime}>{crime}: <span className="font-bold">{count}</span></li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Section */}
+          <div className="mt-8 w-full max-w-4xl">
+            <Charts 
+              crimeChartData={crimeChartData} 
+              categoryData={categoryData} 
+              COLORS={COLORS} 
+              reportDataLength={reportData.length} 
+            />
+          </div>
+
+          {/* Incidents List */}
+          <div className="mt-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Incident Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-96 overflow-y-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="p-2 text-left">Case No</th>
+                        <th className="p-2 text-left">District</th>
+                        <th className="p-2 text-left">Date</th>
+                        <th className="p-2 text-left">Crime Type</th>
+                        <th className="p-2 text-left">Category</th>
+                        <th className="p-2 text-left">Age</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportData.map((item, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="p-2">{item.fir_no}</td>
+                          <td className="p-2">{item["District/City"]}</td>
+                          <td className="p-2">{format(new Date((item.case_date - 25569) * 86400 * 1000), "MM/dd/yyyy")}</td>
+                          <td className="p-2">{item.Crime_Head}</td>
+                          <td className="p-2">{item.Category}</td>
+                          <td className="p-2">{item.age}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
     </div>
   )
