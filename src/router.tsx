@@ -14,7 +14,7 @@ import DeleteUser from "./pages/DeleteUser";
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Navigate to="/auth/user" />,
+    element: <Navigate to="/auth/signin" />,
   },
   {
     path: "/dashboard",
