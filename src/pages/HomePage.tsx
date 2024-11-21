@@ -75,7 +75,7 @@ const HomePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <BarChartComponent dateRange={date} ageGroup={ageGroup} />
         <LineChartComponent />
-        <PieChartComponent />
+        <PieChartComponent dateRange={date} ageGroup={ageGroup} />
         <HeatmapComponent dateRange={date} ageGroup={ageGroup} />
       </div>
     </div>
