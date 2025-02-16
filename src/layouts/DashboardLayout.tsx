@@ -31,6 +31,12 @@ const DashboardLayout = () => {
             Users
           </Link>
           <Link
+            to="/dashboard/heatmap"
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Heatmap
+          </Link>
+          <Link
             to="/dashboard/fir"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >

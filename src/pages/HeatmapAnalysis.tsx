@@ -1,4 +1,4 @@
-import { HeatmapWithFilters } from "@/components/graph/Heatmap";
+import HeatmapWithFilters from "@/components/graph/Heatmap";
 
 function HeatmapAnalysis(){
   return(
