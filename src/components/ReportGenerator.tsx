@@ -510,6 +510,62 @@ export const ReportGenerator: React.FC = () => {
     }
   };
 
+  const handleClickDistrict = (districtName: string) => {
+    setDistrict(districtName);
+    
+    // Filter data immediately after setting district
+    const filteredData = data.filter((item) => {
+      try {
+        const caseDate = convertExcelDateToJS(item.case_date);
+        const isWithinDateRange = dateRange.startDate && dateRange.endDate
+          ? caseDate >= dateRange.startDate && caseDate <= dateRange.endDate
+          : true;
+        const isWithinAgeRange = item.age >= ageRange[0] && item.age <= ageRange[1]
+        const matchesCategory = !category || item.Category.toLowerCase() === category.toLowerCase()
+        const matchesGender = !genderType || item.Gender.toLowerCase() === genderType.toLowerCase()
+        const matchesDistrict = item["District/City"] === districtName  // Use the clicked district directly
+        const matchesIpc = !ipc || item.Crime_Head === ipc
+
+        return isWithinDateRange && isWithinAgeRange && matchesCategory && matchesGender && matchesDistrict && matchesIpc;
+      } catch (error) {
+        console.error('Error processing item:', item, error);
+        return false;
+      }
+    });
+    
+    setReportData(filteredData);
+  };
+
+  const handleClickCrime = (crimeName: string) => {
+    const matchedCrime = data.find((item) => truncateCrimeName(item.Crime_Head) === crimeName);
+    
+    if (matchedCrime) {
+      setIpc(matchedCrime.Crime_Head);
+      
+      // Filter data immediately based on the clicked crime
+      const filteredData = data.filter((item) => {
+        try {
+          const caseDate = convertExcelDateToJS(item.case_date);
+          const isWithinDateRange = dateRange.startDate && dateRange.endDate
+            ? caseDate >= dateRange.startDate && caseDate <= dateRange.endDate
+            : true;
+          const isWithinAgeRange = item.age >= ageRange[0] && item.age <= ageRange[1]
+          const matchesCategory = !category || item.Category.toLowerCase() === category.toLowerCase()
+          const matchesGender = !genderType || item.Gender.toLowerCase() === genderType.toLowerCase()
+          const matchesDistrict = !district || item["District/City"] === district
+          const matchesIpc = truncateCrimeName(item.Crime_Head) === crimeName // Use the clicked crime
+
+          return isWithinDateRange && isWithinAgeRange && matchesCategory && matchesGender && matchesDistrict && matchesIpc;
+        } catch (error) {
+          console.error('Error processing item:', item, error);
+          return false;
+        }
+      });
+      
+      setReportData(filteredData);
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
       {/* Input Fields (Filters) */}
@@ -603,7 +659,11 @@ export const ReportGenerator: React.FC = () => {
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                         {Object.entries(districtWiseCount).map(([district, count]) => (
-                          <div key={district} className="flex justify-between border p-2 rounded">
+                          <div
+                            key={district}
+                            onClick={() => handleClickDistrict(district)}
+                            className="cursor-pointer flex justify-between border p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors"
+                          >
                             <span>{district}</span>
                             <span className="font-bold ">{count}</span>
                           </div>
@@ -618,7 +678,11 @@ export const ReportGenerator: React.FC = () => {
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                         {Object.entries(crimeWiseCount).map(([crime, count]) => (
-                          <div key={crime} className="flex justify-between border p-2 rounded">
+                          <div
+                            key={crime}
+                            onClick={() => handleClickCrime(crime)}
+                            className="cursor-pointer flex justify-between border p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors"
+                          >
                             <span>{crime}</span>
                             <span className="font-bold">{count}</span>
                           </div>
