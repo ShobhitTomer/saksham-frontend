@@ -448,7 +448,10 @@ const CrimeDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {crimeStats?.districts.map((district, index) => (
+                    {crimeStats?.districts
+                      .slice()
+                      .sort((a, b) => parseFloat(b.detectionRate) - parseFloat(a.detectionRate))
+                      .map((district, index) => (
                       <tr key={index} className="border-b">
                         <td className="py-3 px-4 font-medium">{district.name}</td>
                         <td className="text-right py-3 px-4">{district.crimes}</td>
