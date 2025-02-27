@@ -22,7 +22,9 @@ interface DataItem {
   Category: string;
   fir_no: string;
   "District/City": string;
-  IS_DETECTED?: boolean; 
+  "IS_DETECTED (Yes/No)": string; // Has values "Detected" or "Undetected"
+  latitude: number;
+  longitude: number;
 }
 
 interface DistrictSummary {
@@ -38,24 +40,25 @@ interface DistrictCrimeHeatmapProps {
   districts: DistrictSummary[];
 }
 
-// Mock district coordinates for India (would be replaced with actual locations in production)
+// Gujarat district coordinates (approximate centers)
 const districtCoordinates = {
-  'Badarpur': [28.5029, 77.3020],
-  'Saket': [28.5260, 77.2091],
-  'Delhi Cantt': [28.5926, 77.1376],
-  'Vasant Vihar': [28.5610, 77.1573],
-  'Mehrauli': [28.5167, 77.1833],
-  'Paschim Vihar': [28.6654, 77.1019],
-  'Punjabi Bagh': [28.6711, 77.1322],
-  'Rohini': [28.7410, 77.1180],
-  'Alipur': [28.8132, 77.1533],
-  'Model Town': [28.7158, 77.1917],
-  'Timarpur': [28.7128, 77.2233],
-  'Mayur Vihar': [28.6073, 77.2937],
-  'Lajpat Nagar': [28.5678, 77.2432],
-  'Vasant Kunj': [28.5246, 77.1567],
-  'Dwarka': [28.5921, 77.0460],
-  // Add coordinates for other districts as needed
+  'Surat City': [21.1702, 72.8311],
+  'Bharuch': [21.7051, 72.9959],
+  'Dahod': [22.8370, 74.2531],
+  'Ahmedabad': [23.0225, 72.5714],
+  'Rajkot': [22.3039, 70.8022],
+  'Vadodara': [22.3072, 73.1812],
+  'Bhavnagar': [21.7645, 72.1519],
+  'Jamnagar': [22.4707, 70.0577],
+  'Gandhinagar': [23.2156, 72.6369],
+  'Junagadh': [21.5222, 70.4579],
+  'Anand': [22.5645, 72.9289],
+  'Navsari': [20.9467, 72.9520],
+  'Mehsana': [23.5880, 72.3693],
+  'Morbi': [22.8173, 70.8333],
+  'Patan': [23.8493, 72.1266],
+  // Default center for unknown districts
+  'Default': [22.2587, 71.1924] // Center of Gujarat
 };
 
 // Heat layer initialization component
@@ -135,59 +138,142 @@ const DistrictCrimeHeatmap: React.FC<DistrictCrimeHeatmapProps> = ({ data, distr
     // Process district data with coordinates
     const processedDistricts = districts.map(district => {
       const districtName = district.name;
-      // Try to get coordinates, default to Delhi center if not found
-      const coords = districtCoordinates[districtName] || [28.6139, 77.2090];
+      
+      // Find crimes in this district to get average coordinates
+      const districtCrimes = data.filter(item => item["District/City"] === districtName);
+      
+      // Calculate average lat/long (if available)
+      let avgLat = 0;
+      let avgLng = 0;
+      let validCoords = 0;
+      
+      districtCrimes.forEach(crime => {
+        if (crime.latitude && crime.longitude && crime.latitude !== 0 && crime.longitude !== 0) {
+          avgLat += crime.latitude;
+          avgLng += crime.longitude;
+          validCoords++;
+        }
+      });
+      
+      // Calculate average or use fallback coordinates
+      let coordinates: [number, number];
+      if (validCoords > 0) {
+        coordinates = [avgLat / validCoords, avgLng / validCoords];
+      } else {
+        // Try fallback to dictionary or use a central India coordinate
+        coordinates = districtCoordinates[districtName] || [22.5726, 72.8777];
+      }
       
       return {
         ...district,
-        center: coords as [number, number]
+        center: coordinates
       };
     });
     
-    // Generate heatmap points based on districts
-    // In a real app, you would use actual crime locations
+    // Generate heatmap points from actual crime data
     const points: Array<[number, number, number]> = [];
     
-    // For each district, create points based on crime count
-    processedDistricts.forEach(district => {
-      if (!district.center) return;
-      
-      // Create intensity based on crime count
-      const intensity = district.crimes / 100; // Normalize intensity
-      
-      // Add a point at district center
-      points.push([
-        district.center[0], 
-        district.center[1], 
-        intensity > 1 ? 1 : intensity
-      ]);
-      
-      // Spread some points around district center
-      const crimeCount = Math.min(district.crimes, 20); // Cap to prevent too many points
-      
-      for (let i = 0; i < crimeCount; i++) {
-        // Random offset within 0.01 degrees (roughly 1km)
-        const latOffset = (Math.random() - 0.5) * 0.02;
-        const lngOffset = (Math.random() - 0.5) * 0.02;
-        
-        points.push([
-          district.center[0] + latOffset,
-          district.center[1] + lngOffset,
-          Math.random() * intensity * 0.8 // Varied intensity
-        ]);
+    // Use actual crime locations where available
+    data.forEach(crime => {
+      // Skip if no valid coordinates
+      if (!crime.latitude || !crime.longitude || crime.latitude === 0 || crime.longitude === 0) {
+        return;
       }
+      
+      // Base intensity on detection status
+      const intensity = crime["IS_DETECTED (Yes/No)"] === "Detected" ? 0.5 : 0.8;
+      
+      points.push([
+        crime.latitude,
+        crime.longitude,
+        intensity
+      ]);
     });
+    
+    // If we have very few points with coordinates, add some around district centers
+    if (points.length < 10) {
+      processedDistricts.forEach(district => {
+        if (!district.center) return;
+        
+        // Create intensity based on crime count
+        const intensity = district.crimes / 100; // Normalize intensity
+        
+        // Add a point at district center
+        points.push([
+          district.center[0], 
+          district.center[1], 
+          intensity > 1 ? 1 : intensity
+        ]);
+        
+        // Spread some points around district center
+        const crimeCount = Math.min(district.crimes, 20); // Cap to prevent too many points
+        
+        for (let i = 0; i < crimeCount; i++) {
+          // Random offset within 0.01 degrees (roughly 1km)
+          const latOffset = (Math.random() - 0.5) * 0.02;
+          const lngOffset = (Math.random() - 0.5) * 0.02;
+          
+          points.push([
+            district.center[0] + latOffset,
+            district.center[1] + lngOffset,
+            Math.random() * intensity * 0.8 // Varied intensity
+          ]);
+        }
+      });
+    }
     
     setDistrictData(processedDistricts);
     setHeatmapPoints(points);
     setLoading(false);
   }, [data, districts]);
 
-  // Apply filters if needed
+  // Apply filters
   useEffect(() => {
-    // In a real app, you would filter points based on detection status
-    // For now, we're just using all points
-  }, [filters]);
+    if (!data || data.length === 0) return;
+    
+    // Filter points based on detection status
+    const filteredPoints: Array<[number, number, number]> = [];
+    
+    data.forEach(crime => {
+      // Skip if no valid coordinates
+      if (!crime.latitude || !crime.longitude || crime.latitude === 0 || crime.longitude === 0) {
+        return;
+      }
+      
+      const isDetected = crime["IS_DETECTED (Yes/No)"] === "Detected";
+      
+      // Check if we should include this point based on filters
+      if ((isDetected && filters.detected) || (!isDetected && filters.undetected)) {
+        // Base intensity on detection status
+        const intensity = isDetected ? 0.5 : 0.8;
+        
+        filteredPoints.push([
+          crime.latitude,
+          crime.longitude,
+          intensity
+        ]);
+      }
+    });
+    
+    // If we have very few points with coordinates, add some around district centers
+    if (filteredPoints.length < 10) {
+      districtData.forEach(district => {
+        if (!district.center) return;
+        
+        // Create intensity based on crime count
+        const intensity = district.crimes / 100; // Normalize intensity
+        
+        // Add a point at district center
+        filteredPoints.push([
+          district.center[0], 
+          district.center[1], 
+          intensity > 1 ? 1 : intensity
+        ]);
+      });
+    }
+    
+    setHeatmapPoints(filteredPoints);
+  }, [filters, data, districtData]);
 
   // Get color based on detection rate
   const getDetectionRateColor = (rate: number | string) => {
@@ -211,8 +297,8 @@ const DistrictCrimeHeatmap: React.FC<DistrictCrimeHeatmapProps> = ({ data, distr
   return (
     <div className="h-full w-full relative">
       <MapContainer 
-        center={[28.6139, 77.2090]} // Delhi center coordinates
-        zoom={11} 
+        center={[22.2587, 71.1924]} // Gujarat center coordinates
+        zoom={7} 
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
       >
