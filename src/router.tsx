@@ -10,6 +10,7 @@ import SignUp from "./pages/SignUp";
 import AllUsers from "./pages/AllUsers";
 import AddUser from "./pages/AddUser";
 import DeleteUser from "./pages/DeleteUser";
+import HeatmapAnalysis from "./pages/HeatmapAnalysis";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       {
         path: "",
         element: <HomePage />,
+      },
+      {
+        path: "heatmap",
+        element: <HeatmapAnalysis />,
       },
       {
         path: "fir",
