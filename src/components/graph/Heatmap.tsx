@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
@@ -9,38 +9,48 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import html2canvas from "html2canvas";
 
-// Import the crime data JSON
+
 import crimeData from "@/data/data.json";
+
+const excelDateToJSDate = (excelDate: number) => {
+  return new Date((excelDate - 25569) * 86400 * 1000);
+};
 
 const HeatmapWithFilters = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: undefined, // No start date initially
-    to: undefined, // No end date initially
+    from: undefined,
+    to: undefined,
   });
   const [ageGroup, setAgeGroup] = useState<string>("All");
-  const [filteredData, setFilteredData] = useState(crimeData);
 
-  useEffect(() => {
-    // Apply filters whenever the filter state changes
-    const newFilteredData = crimeData.filter((crime: any) => {
-      const crimeDate = new Date(crime.case_date);
+  const filteredData = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) return crimeData;
 
-      // Check if the crime date falls within the selected date range
+    return crimeData.filter((crime: any) => {
+      const crimeDate = excelDateToJSDate(crime.case_date);
+
       const isDateInRange =
-        (!dateRange?.from || crimeDate >= dateRange.from) &&
-        (!dateRange?.to || crimeDate <= dateRange.to);
+        crimeDate >= dateRange.from && crimeDate <= dateRange.to;
 
-      // Check if the age group matches or "All" is selected
-      const isAgeGroupMatch = ageGroup === "All" || crime.age_group === ageGroup;
+      if (ageGroup !== "All") {
+        const [minAge, maxAge] = ageGroup.split("-");
+        if (maxAge) {
+          if (crime.age < parseInt(minAge) || crime.age > parseInt(maxAge)) {
+            return false;
+          }
+        } else if (parseInt(minAge) === 60 && crime.age < 60) {
+          return false;
+        }
+      }
 
-      return isDateInRange && isAgeGroupMatch;
+      return isDateInRange;
     });
-
-    setFilteredData(newFilteredData);
   }, [dateRange, ageGroup]);
 
-  // Utility function to get a color based on the crime category
   const getColor = (crimeCategory: string) => {
     switch (crimeCategory) {
       case "Vehical":
@@ -50,6 +60,65 @@ const HeatmapWithFilters = () => {
       default:
         return "orange";
     }
+  };
+
+  const exportToPDF = async () => {
+    const pdf = new jsPDF("portrait", "mm", "a4");
+
+    // Add the heatmap to the PDF
+    const mapElement = document.querySelector(".leaflet-container") as HTMLElement;
+    if (mapElement) {
+      const mapCanvas = await html2canvas(mapElement);
+      const mapImage = mapCanvas.toDataURL("image/png");
+      pdf.addImage(mapImage, "PNG", 10, 10, 190, 100); // Adjust position and size
+    }
+
+    // Add the heading for filtered data
+    pdf.text("Filtered Crime Data:", 10, 120);
+
+    // Calculate total crimes per place
+    const crimesPerPlace: { [key: string]: number } = {};
+    filteredData.forEach((crime: any) => {
+      crimesPerPlace[crime.loc_name] = (crimesPerPlace[crime.loc_name] || 0) + 1;
+    });
+
+    // Prepare the data for the table
+    const placewiseData = Object.entries(crimesPerPlace).map(([place, total]) => [
+      place,
+      total,
+    ]);
+
+    // Add the overall total crimes to the table
+    const overallTotalCrimes = filteredData.length;
+    placewiseData.push(["Overall Total Crimes", overallTotalCrimes]);
+
+    // Add the placewise summary table
+    pdf.autoTable({
+      startY: 130,
+      head: [["Place", "Total Incidents"]],
+      body: placewiseData,
+      styles: { fontSize: 10, cellPadding: 3 },
+      theme: "grid",
+    });
+
+    // Add the detailed table of filtered data
+    pdf.autoTable({
+      startY: pdf.lastAutoTable.finalY + 10, // Start below the first table
+      head: [["FIR No", "Location", "Crime", "Category", "Case Date", "Age Group"]],
+      body: filteredData.map((crime: any) => [
+        crime.fir_no,
+        crime.loc_name,
+        crime.Crime_Head,
+        crime.Category,
+        format(excelDateToJSDate(crime.case_date), "dd/MM/yyyy"),
+        crime.age_group,
+      ]),
+      styles: { fontSize: 8, cellPadding: 2 },
+      theme: "grid",
+    });
+
+    // Save the PDF
+    pdf.save("Filtered_Heatmap_Report.pdf");
   };
 
   return (
@@ -110,6 +179,30 @@ const HeatmapWithFilters = () => {
             <SelectItem value="60+">60+</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Export & Legend Section */}
+      <div className="flex justify-between items-center mb-4">
+        {/* Legend */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-red-500"></div>
+            <span>Vehicle</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+            <span>Mobile</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+            <span>Other</span>
+          </div>
+        </div>
+
+        {/* Export Button */}
+        <Button onClick={exportToPDF} className="bg-green-500 text-white">
+          Export Heatmap as PDF
+        </Button>
       </div>
 
       {/* Heatmap */}
