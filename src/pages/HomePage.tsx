@@ -14,10 +14,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import dataJson from "../data/data.json"
+
+// Import charts from home-components
 import DetectionRateByTypeChart from "../components/homeGraph/DetectionRateByTypeChart"
-// import DistrictDetectionChart from "@/components/DistrictDetectionChart"
-// import ResponseTimeVsDetectionChart from "@/components/ResponseTimeVsDetectionChart"
+import DistrictDetectionChart from "../components/homeGraph/DistrictDetectionChart"
 import DistrictCrimeHeatmap from "../components/homeGraph/DistrictCrimeHeatmap"
+import DistrictCrimeTypeChart from "../components/homeGraph/DistrictCrimeTypeChart"
+import DistrictAgeChart from "../components/homeGraph/DistrictAgeChart"
+import CrimeTrendsChart from "../components/homeGraph/CrimeTrendsChart"
+import SeasonalPatternChart from "../components/homeGraph/SeasonalPatternChart"
+import YearComparisonChart from "../components/homeGraph/YearComparisonChart"
 
 // Type for the data coming from data.json
 interface DataItem {
@@ -28,7 +34,9 @@ interface DataItem {
   Category: string;
   fir_no: string;
   "District/City": string;
-  IS_DETECTED?: boolean; // Assuming there's a detection field, might need to be adjusted
+  "IS_DETECTED (Yes/No)": string; // Has values "Detected" or "Undetected"
+  latitude?: number;
+  longitude?: number;
 }
 
 // Helper function to convert Excel date to JS date (same as in ReportGenerator)
@@ -93,7 +101,7 @@ const CrimeDashboard = () => {
           };
         }
         crimeTypes[crimeType].count++;
-        if (item.IS_DETECTED) {
+        if (item["IS_DETECTED (Yes/No)"] === "Detected") {
           crimeTypes[crimeType].detectedCount++;
         }
       });
@@ -114,12 +122,11 @@ const CrimeDashboard = () => {
           districts[district] = { 
             name: district, 
             crimes: 0, 
-            detectedCount: 0,
-            avgResponseTime: Math.floor(Math.random() * 30) + 10 // Mock response time (replace with actual data)
+            detectedCount: 0
           };
         }
         districts[district].crimes++;
-        if (item.IS_DETECTED) {
+        if (item["IS_DETECTED (Yes/No)"] === "Detected") {
           districts[district].detectedCount++;
         }
       });
@@ -134,7 +141,7 @@ const CrimeDashboard = () => {
       
       // Overall detection rate
       const totalCrimes = filteredData.length;
-      const detectedCrimes = filteredData.filter(item => item.IS_DETECTED).length;
+      const detectedCrimes = filteredData.filter(item => item["IS_DETECTED (Yes/No)"] === "Detected").length;
       const overallDetectionRate = totalCrimes > 0 
         ? (detectedCrimes / totalCrimes * 100).toFixed(1) 
         : 0;
@@ -340,17 +347,17 @@ const CrimeDashboard = () => {
                   <CardDescription>Detection rates across districts</CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
-                  {/* <DistrictDetectionChart data={crimeStats?.districts || []} /> */}
+                  <DistrictDetectionChart data={crimeStats?.districts || []} />
                 </CardContent>
               </Card>
               
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle>Response Time vs Detection Rate</CardTitle>
-                  <CardDescription>Correlation analysis by district</CardDescription>
+                  <CardTitle>Category-wise Detection Analysis</CardTitle>
+                  <CardDescription>Comparison of detection rates by crime category</CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
-                  {/* <ResponseTimeVsDetectionChart data={crimeStats?.districts || []} /> */}
+                  <YearComparisonChart data={crimeStats?.rawData || []} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -437,7 +444,6 @@ const CrimeDashboard = () => {
                       <th className="text-left py-3 px-4">District</th>
                       <th className="text-right py-3 px-4">Total Crimes</th>
                       <th className="text-right py-3 px-4">Detection Rate</th>
-                      <th className="text-right py-3 px-4">Avg Response (min)</th>
                       <th className="text-left py-3 px-4">Status</th>
                     </tr>
                   </thead>
@@ -451,7 +457,6 @@ const CrimeDashboard = () => {
                             {district.detectionRate}%
                           </span>
                         </td>
-                        <td className="text-right py-3 px-4">{district.avgResponseTime}</td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${parseFloat(district.detectionRate) >= 70 ? 'bg-green-100 text-green-800' : parseFloat(district.detectionRate) >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
                             {parseFloat(district.detectionRate) >= 70 ? 'Excellent' : parseFloat(district.detectionRate) >= 60 ? 'Average' : 'Needs Improvement'}
@@ -466,47 +471,6 @@ const CrimeDashboard = () => {
           </Card>
         </>
       )}
-    </div>
-  )
-}
-
-// Placeholder chart components with data prop
-const DistrictCrimeTypeChart = ({ data }) => {
-  return (
-    <div className="h-full w-full flex items-center justify-center">
-      <p className="text-muted-foreground">District Crime Type Chart Component</p>
-    </div>
-  )
-}
-
-const DistrictAgeChart = ({ data }) => {
-  return (
-    <div className="h-full w-full flex items-center justify-center">
-      <p className="text-muted-foreground">District Age Chart Component</p>
-    </div>
-  )
-}
-
-const CrimeTrendsChart = ({ data }) => {
-  return (
-    <div className="h-full w-full flex items-center justify-center">
-      <p className="text-muted-foreground">Crime Trends Chart Component</p>
-    </div>
-  )
-}
-
-const SeasonalPatternChart = ({ data }) => {
-  return (
-    <div className="h-full w-full flex items-center justify-center">
-      <p className="text-muted-foreground">Seasonal Pattern Chart Component</p>
-    </div>
-  )
-}
-
-const YearComparisonChart = ({ data }) => {
-  return (
-    <div className="h-full w-full flex items-center justify-center">
-      <p className="text-muted-foreground">Year Comparison Chart Component</p>
     </div>
   )
 }
