@@ -11,6 +11,7 @@ import AllUsers from "./pages/AllUsers";
 import AddUser from "./pages/AddUser";
 import DeleteUser from "./pages/DeleteUser";
 import HeatmapAnalysis from "./pages/HeatmapAnalysis";
+import ChatBot from "./pages/ChatBot";
 
 const router = createBrowserRouter([
   {
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
         element: <FirPage />,
       },
       {
+        path: "chatbot",
+        element: <ChatBot />,
+      },
+      {
         path: "users",
         element: <AllUsers />,
         children: [
@@ -44,8 +49,8 @@ const router = createBrowserRouter([
           {
             path: "deleteuser",
             element: <DeleteUser />,
-          }
-        ]
+          },
+        ],
       },
       {
         path: "analysis",
@@ -72,7 +77,6 @@ const router = createBrowserRouter([
       },
     ],
   },
-  
 ]);
 
 export default router;
