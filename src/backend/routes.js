@@ -176,7 +176,7 @@ router.post("/api/chat", async (req, res) => {
     }
 
     const responseStream = await ollama.chat({
-      model: "qwen3:4b",
+      model: "gemma3:4b",
       messages: messagesForApi,
       stream: true,
     });
